@@ -11,7 +11,6 @@ type Value interface {
 	Len() int
 }
 
-
 type entry struct {
 	key string
 	value Value
@@ -26,6 +25,7 @@ type Cache struct {
 
 
 	ll *list.List
+
 	cache map[string] *list.Element
 
 	//某条记录被移除时的回调函数，可以是nil
