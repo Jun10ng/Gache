@@ -1,5 +1,4 @@
-
-##golang 实现 lru
+## golang 实现 lru
 
  代码
 
@@ -152,7 +151,7 @@ func (c *cache) add(key string, value ByteView){
 	c.lru.Add(key,value)
 }
 ```
-##http调用
+## http调用
 TODO
 
 ## 一致性哈希
