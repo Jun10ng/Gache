@@ -1,3 +1,7 @@
+---
+typora-root-url: ./
+---
+
 # Golang校招面试项目-类redis分布式缓存
 
 实现一个分布式缓存，功能有：LRU淘汰策略，http调用，并发缓存，一致性哈希，分布式节点，防止缓存击穿
@@ -101,7 +105,7 @@ groups = make(map[string]*Group)
 
 
 
-![group](E:\Gache\img\group.jpg)
+![group](/img/group.jpg)
 
 我们要实现的数据结构大致是这样的，是一个存储`并发cache`的表，这是本项目的核心结构
 
