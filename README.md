@@ -4,6 +4,8 @@ typora-root-url: ./
 
 # Golang校招面试项目-类redis分布式缓存
 
+原文地址：https://www.cnblogs.com/Jun10ng/p/12628081.html
+
 实现一个分布式缓存，功能有：LRU淘汰策略，http调用，并发缓存，一致性哈希，分布式节点，防止缓存击穿
 
 ## 实现LRU淘汰策略
