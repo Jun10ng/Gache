@@ -10,7 +10,7 @@ LRU的数据结构大致如下，上层是一个`map`，key是数据对象的key
 * add：存在->更新，不存在->增加;将元素所在节点提到最前面,判断是否大于`maxSize`
 * removeOldest:删除链表最后方的节点
 
-![](C:\Users\kile1\Desktop\lru.jpg)
+![lru](E:\Gache\img\lru.jpg)
 
 ### 代码实现
 
@@ -101,7 +101,7 @@ groups = make(map[string]*Group)
 
 
 
-![](C:\Users\kile1\Desktop\group.jpg)
+![group](E:\Gache\img\group.jpg)
 
 我们要实现的数据结构大致是这样的，是一个存储`并发cache`的表，这是本项目的核心结构
 
