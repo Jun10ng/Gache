@@ -135,5 +135,76 @@ type Group struct {
 groups[groupname][key]
 ```
 
-### 
+## 一致性哈希
 
+一致性哈希抽象的解释就是一个很大的环，但是在实现的时候，我们总不可能声明一个有个成千链表节点的环吧，何况其中大多节点还是闲置节点，没有实际的作用，所以我们需要在逻辑上去声明哈希环。
+
+代码实现：https://github.com/Jun10ng/Gache/blob/master/consistent/consistentHash.go
+
+## 数据结构
+
+![img](https://github.com/Jun10ng/Gache/blob/master/img/consistentHash.png)
+
+（真实节点就是指机器，虚拟节点相反）
+
+```
+type Map struct {
+	hash Hash
+	virMpl int
+	keys []int
+	hashMap map[int]string
+}
+```
+
+* `hash`是函数变量
+* `virMpl`是虚拟节点的倍数
+* `keys`是存放节点**哈希值**的有序数组
+* hashMap中存放的是虚拟节点和真实节点的对映，之所以是`[int]string`类型，是因为`key`是虚拟节点的哈希值，`value`是真实节点
+
+## 添加真实节点
+
+代码注释写的很详细了，就不多说了。
+
+**缺点**是，当有一个真实节点添加进来的时候，所有值都要重新计算一遍。这在并发情况下，会造成一定拥塞。因为在重新计算期间，不能进行正确的访问操作。
+
+欢迎提供解决思路。
+
+```
+func (m* Map) Add(keys ...string){
+	for _,realNodeKey:=range keys{
+		for i:=0;i<m.virMpl;i++{
+			/*
+				keys中的每个真实节点都对映着virMpl个虚拟节点
+				每个虚拟节点的key（即virNodeKey）为 i+realNodekey
+				（即一个“不定数”，这里用i值，加上真实节点key
+			*/
+			virNodeKey := []byte(strconv.Itoa(i)+realNodeKey)
+			/*
+				对虚拟节点做哈希
+			*/
+			virNodeHash:= int(m.hash(virNodeKey))
+			/*
+				添加进哈希环，所以虚拟节点也存在于哈希环中
+			*/
+			m.keys = append(m.keys,virNodeHash)
+			/*
+				虚拟节点的hash对映某个真实节点的key
+			*/
+			m.hashMap[virNodeHash] = realNodeKey
+		}
+	}
+	sort.Ints(m.keys)
+}
+```
+
+### 访问真实节点
+
+也就是`get`函数
+
+分为三个步骤
+
+* 计算出虚拟节点的哈希值`virNodeHash`
+* 在`keys`数组中找到大于等于`virNodeHash`的值，返回其下标`index`，则对应的节点为`keys[index]`
+* 通过下标在`hashMap`中找到`keys[index]`的真实节点
+
+自己试着写下`get`函数，会对整个逻辑更清晰。
