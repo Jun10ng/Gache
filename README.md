@@ -208,3 +208,24 @@ func (m* Map) Add(keys ...string){
 * 通过下标在`hashMap`中找到`keys[index]`的真实节点
 
 自己试着写下`get`函数，会对整个逻辑更清晰。
+
+
+
+## 分布式节点设计
+
+这一章涉及的东西有点多，在代码中给出了详细的注释，
+
+主要是下面几个文件：
+
+https://github.com/Jun10ng/Gache/blob/master/peer.go 
+
+定义了两个抽象接口，用于远程节点的获取
+
+https://github.com/Jun10ng/Gache/blob/master/http.go
+
+实现了`peer.go`中的两个接口，并定义了新的结构体`httpGetter`用于获取远程节点缓存数据
+
+https://github.com/Jun10ng/Gache/blob/master/gache.go
+
+集成了一致性哈希表，使用http访问各个节点
+
