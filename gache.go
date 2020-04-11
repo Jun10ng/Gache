@@ -1,10 +1,6 @@
 package Gache
 
-import (
-	"fmt"
-	"log"
-	"sync"
-)
+import "log"
 
 /*
 负责与外部交互
@@ -42,8 +38,65 @@ type Group struct {
 	name string
 	getter Getter
 	mainCache cache
+	/*
+	后续添加
+	*/
+	/*
+		一致性哈希算法的节点表
+	*/
+	peers PeerPicker
 }
 
+/*
+	注册节点
+*/
+func(g *Group) RegisterPeers(peers PeerPicker){
+	if g.peers != nil{
+		panic("注册器已被调用过")
+	}
+	g.peers = peers
+}
+
+/*
+	load方法
+	如果是远程节点，使用PickPeer()方法选择节点
+	本地节点则使用getLocally()
+*/
+func (g *Group) load(key string) (value ByteView, err error) {
+	if g.peers != nil {
+		if peer, ok := g.peers.PickPeer(key); ok {
+			if value, err = g.getFromPeer(peer, key); err == nil {
+				return value, nil
+			}
+			log.Println("[Gache] Failed to get from peer", err)
+		}
+	}
+
+	return g.getLocally(key)
+}
+
+func (g *Group) getFromPeer(peer PeerGetter, key string) (ByteView, error) {
+	bytes, err := peer.Get(g.name, key)
+	if err != nil {
+		return ByteView{}, err
+	}
+	return ByteView{b: bytes}, nil
+}
+
+func (g *Group) getLocally(key string)(ByteView,error) {
+	bytes,err := g.getter.Get(key)
+	if err!=nil{
+		return ByteView{},err
+	}
+	value := ByteView{b:cloneBytes(bytes)}
+	//将远程数据添加到当前缓存
+	g.popularCache(key,value)
+	return value,nil
+}
+func (g *Group) popularCache(key string,value ByteView) {
+	g.mainCache.add(key,value)
+}
+/*
 var (
 	mu  sync.RWMutex
 	groups = make(map[string]*Group)
@@ -107,10 +160,5 @@ func (g *Group) popularCache(key string,value ByteView) {
 	g.mainCache.add(key,value)
 }
 
-
-
-
-
-
-
+*/
 

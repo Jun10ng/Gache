@@ -1,14 +1,25 @@
 package Gache
 
 import (
-
+	"Gache/consistent"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
+	"sync"
 )
 
-const defaultBasePath  = "/_Gache/"
+const(
+	defaultBasePath = "/_Gache"
+	/*
+		节点数，后续代码添加
+	*/
+	defaultReplicas = 50
+)
+
+
 
 //线程池
 /*
@@ -20,6 +31,24 @@ const defaultBasePath  = "/_Gache/"
 type HTTPPool struct {
 	self 	 string
 	basePath string
+	/*
+		后续代码添加
+	*/
+	/*
+		监视节点和httpGetters
+	*/
+	mu 		    sync.Mutex
+	/*
+		一致性哈希算法的Map，
+		用来根据具体的key选择节点
+	*/
+	peers       *consistent.Map
+	/*
+		key值为：http://xxxxx
+		每个远程连接节点对应一个httpGetter
+		因为httpGetter与远程节点的地址 baseURL有关
+	*/
+	httpGetters map[string]*httpGetter
 }
 
 func NewHTTPPool(self string) *HTTPPool  {
@@ -71,4 +100,111 @@ func (p *HTTPPool) ServeHTTP (w http.ResponseWriter,r *http.Request){
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Write(view.ByteSlice())
 }
+
+/*
+	httpGetter 实现 peer.go中的peerGetter接口
+	baseURL 表示将要访问的远程节点的地址
+	例如http://example.com/gache/
+	使用http.Get()方式获取返回值，并转换为[]bytes类型
+*/
+type httpGetter struct{
+	baseURL string
+}
+
+func (hg *httpGetter)Get(group string,key string)([]byte,error){
+	var b  strings.Builder
+	b.WriteString(hg.baseURL)
+	b.WriteString(url.QueryEscape(group))
+	b.WriteString(url.QueryEscape(key))
+	s := b.String()
+
+	res,err := http.Get(s)
+	if err != nil {
+		return nil,err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode!= http.StatusOK {
+		return nil,fmt.Errorf("server returned : %v",res.Status)
+	}
+
+	bytes,err := ioutil.ReadAll(res.Body)
+
+	if err != nil{
+		return nil, fmt.Errorf("reading response body: %v",err)
+	}
+
+	return bytes,nil
+}
+
+var _ PeerGetter = (*httpGetter)(nil)
+
+
+
+/*
+	实现PeerPicker接口
+*/
+
+/*
+	Set()实例化了一致性哈希算法
+	并添加了传入的节点
+*/
+func (p *HTTPPool)Set(peers ...string){
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	/*
+		实例化
+	*/
+	p.peers = consistent.New(defaultReplicas,nil)
+	/*
+		添加传入节点
+	*/
+	p.peers.Add(peers...)
+	/*
+		为每个节点配置Getter
+	*/
+	p.httpGetters = make(map[string]*httpGetter,len(peers))
+
+	/*
+		peer如http://xxxx/gache
+		basePath如 groupId/key
+	*/
+	for _,peer := range peers{
+		p.httpGetters[peer] = &httpGetter{
+			baseURL:peer+p.basePath,
+		}
+
+	}
+}
+/*
+	PickerPeer() 包装了一致性哈希算法的 Get() 方法，
+	根据具体的 key，选择节点，返回节点对应的 HTTP 客户端。
+*/
+func (p *HTTPPool) PickPeer(key string) (PeerGetter, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if peer := p.peers.Get(key); peer != "" && peer != p.self {
+		p.Log("Pick peer %s", peer)
+		return p.httpGetters[peer], true
+	}
+	return nil, false
+}
+
+var _ PeerPicker = (*HTTPPool)(nil)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
