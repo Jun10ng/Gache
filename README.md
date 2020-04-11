@@ -213,6 +213,10 @@ func (m* Map) Add(keys ...string){
 
 ## 分布式节点设计
 
+### 实现功能
+
+使用一致性哈希选择节点时，判断是否为远程节点，再使用http客户端去访问远程节点，如果不是远程节点就是本地节点。
+
 这一章涉及的东西有点多，在代码中给出了详细的注释，
 
 主要是下面几个文件：
@@ -223,7 +227,7 @@ https://github.com/Jun10ng/Gache/blob/master/peer.go
 
 https://github.com/Jun10ng/Gache/blob/master/http.go
 
-实现了`peer.go`中的两个接口，并定义了新的结构体`httpGetter`用于获取远程节点缓存数据
+实现了`peer.go`中的两个接口，并定义了新的结构体`httpGetter`， HTTP 客户端类，用于获取远程节点缓存数据
 
 https://github.com/Jun10ng/Gache/blob/master/gache.go
 
