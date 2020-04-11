@@ -39,7 +39,7 @@ type HTTPPool struct {
 	*/
 	mu 		    sync.Mutex
 	/*
-		一致性哈希算法的Map，
+		一致性哈希算法的Map，见readMe中的一致性哈希章节的示意图
 		用来根据具体的key选择节点
 	*/
 	peers       *consistent.Map
@@ -114,6 +114,10 @@ type httpGetter struct{
 func (hg *httpGetter)Get(group string,key string)([]byte,error){
 	var b  strings.Builder
 	b.WriteString(hg.baseURL)
+	/*
+		url.QueryEscape用于转义url字段
+		可以被安全地防止
+	*/
 	b.WriteString(url.QueryEscape(group))
 	b.WriteString(url.QueryEscape(key))
 	s := b.String()
@@ -128,8 +132,15 @@ func (hg *httpGetter)Get(group string,key string)([]byte,error){
 		return nil,fmt.Errorf("server returned : %v",res.Status)
 	}
 
+	/*
+		bytes是字节类型的数组
+		具体设计见cache.go和lru.go
+	*/
 	bytes,err := ioutil.ReadAll(res.Body)
 
+	/*
+		异常
+	*/
 	if err != nil{
 		return nil, fmt.Errorf("reading response body: %v",err)
 	}
@@ -166,8 +177,9 @@ func (p *HTTPPool)Set(peers ...string){
 	p.httpGetters = make(map[string]*httpGetter,len(peers))
 
 	/*
-		peer如http://xxxx/gache
-		basePath如 groupId/key
+		peer如http://xxxx.com/
+		basePath如 _Gache/
+		合起来就是一个节点的访问路径
 	*/
 	for _,peer := range peers{
 		p.httpGetters[peer] = &httpGetter{
@@ -179,6 +191,8 @@ func (p *HTTPPool)Set(peers ...string){
 /*
 	PickerPeer() 包装了一致性哈希算法的 Get() 方法，
 	根据具体的 key，选择节点，返回节点对应的 HTTP 客户端。
+	注意，这只是返回一个节点，而不是返回缓存的value
+	返回缓存的实现在gache.go的load()中
 */
 func (p *HTTPPool) PickPeer(key string) (PeerGetter, bool) {
 	p.mu.Lock()

@@ -1,6 +1,10 @@
 package Gache
 
-import "log"
+import (
+	"fmt"
+	"log"
+	"sync"
+)
 
 /*
 负责与外部交互
@@ -39,7 +43,7 @@ type Group struct {
 	getter Getter
 	mainCache cache
 	/*
-	后续添加
+		后续添加
 	*/
 	/*
 		一致性哈希算法的节点表
@@ -64,7 +68,9 @@ func(g *Group) RegisterPeers(peers PeerPicker){
 */
 func (g *Group) load(key string) (value ByteView, err error) {
 	if g.peers != nil {
+		//选择节点
 		if peer, ok := g.peers.PickPeer(key); ok {
+			//远程节点-取值
 			if value, err = g.getFromPeer(peer, key); err == nil {
 				return value, nil
 			}
@@ -75,13 +81,21 @@ func (g *Group) load(key string) (value ByteView, err error) {
 	return g.getLocally(key)
 }
 
+/*
+	远程节点取值实现
+*/
 func (g *Group) getFromPeer(peer PeerGetter, key string) (ByteView, error) {
+	/*
+		这里的peer类型其实是http.go中的httpGetter
+	*/
 	bytes, err := peer.Get(g.name, key)
 	if err != nil {
 		return ByteView{}, err
 	}
 	return ByteView{b: bytes}, nil
 }
+
+
 
 func (g *Group) getLocally(key string)(ByteView,error) {
 	bytes,err := g.getter.Get(key)
@@ -96,7 +110,7 @@ func (g *Group) getLocally(key string)(ByteView,error) {
 func (g *Group) popularCache(key string,value ByteView) {
 	g.mainCache.add(key,value)
 }
-/*
+
 var (
 	mu  sync.RWMutex
 	groups = make(map[string]*Group)
@@ -141,24 +155,7 @@ func (g *Group)Get(key string) (ByteView,error){
 	return g.load(key)
 }
 
-func (g *Group) load(key string) (ByteView, error) {
-	return g.getLocally(key)
-}
-//从其他数据源获取
-func (g *Group) getLocally(key string)(ByteView,error) {
-	bytes,err := g.getter.Get(key)
-	if err!=nil{
-		return ByteView{},err
-	}
-	value := ByteView{b:cloneBytes(bytes)}
-	//将远程数据添加到当前缓存
-	g.popularCache(key,value)
-	return value,nil
-}
 
-func (g *Group) popularCache(key string,value ByteView) {
-	g.mainCache.add(key,value)
-}
 
-*/
+
 
