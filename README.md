@@ -2,7 +2,7 @@
 typora-root-url: ./
 ---
 
-# Golang校招面试项目-类redis分布式缓存
+# 类redis分布式缓存
 
 原文地址：https://www.cnblogs.com/Jun10ng/p/12628081.html
 
